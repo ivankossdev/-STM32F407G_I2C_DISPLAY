@@ -1,32 +1,55 @@
 #include "lcd.h"
-//------------------------------------------------
 uint8_t buf[1]={0};
 extern I2C_HandleTypeDef hi2c1;
 char str1[100];
-uint8_t portlcd; //ячейка для хранения данных порта микросхемы расширения
-//------------------------------------------------
+uint8_t portlcd;
+
+
+/*00 DelayMicro()
+ * Р¤СѓРЅРєС†РёСЏ С„РѕСЂРјРёСЂСѓРµС‚ Р·Р°РґРµСЂР¶РєСѓ РїРµСЂРµРґР°С‡Рё СЃРёРіРЅР°Р»Р°
+ * РІ LCD Р”РёСЃРїР»РµР№
+ *
+ * */
 __STATIC_INLINE void DelayMicro(__IO uint32_t micros)
 {
 	micros *=(SystemCoreClock / 1000000) / 5;
 	while (micros--);
 }
-//------------------------------------------------
+
+
+/*01 LCD_WriteByteI2CLCD()
+ * Р¤СѓРЅРєС†РёСЏ РѕС‚РїСЂР°РІР»СЏРµС‚ Р±Р°Р№С‚ РІ С€РёРЅСѓ I2C
+ *
+ *
+ * */
 void LCD_WriteByteI2CLCD(uint8_t bt)
 {
 	buf[0]=bt;
 	HAL_I2C_Master_Transmit(&hi2c1,(uint16_t) 0x4E,buf,1,1000);
 }
-//------------------------------------------------
+
+
+/*02 sendhalfbyte()
+ * Р¤СѓРЅРєС†РёСЏ С„РѕСЂРјРёСЂСѓРµС‚ РїРѕР»СѓР±Р°Р№С‚ РІ 4 СЃС‚Р°СЂС€РёС… СЂР°Р·СЏРґР°С…
+ * РґР»СЏ 4 РїСЂРѕРІРѕРґРЅРѕРіРѕ РёРЅС‚РµСЂС„РµР№СЃР°
+ *
+ * */
 void sendhalfbyte(uint8_t c)
 {
 	c<<=4;
-	e_set();//включаем линию E
+	e_set();
 	DelayMicro(50);
 	LCD_WriteByteI2CLCD(portlcd|c);
-	e_reset();//выключаем линию E
+	e_reset();
 	DelayMicro(50);
 }
-//------------------------------------------------
+
+
+/*03 sendbyte()
+ * Р¤СѓРЅРєС†РёСЏ РѕС‚РїСЂР°РІР»СЏРµС‚ Р±Р°Р№С‚ РІ LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void sendbyte(uint8_t c, uint8_t mode)
 {
 	if(mode==0) rs_reset();
@@ -35,18 +58,36 @@ void sendbyte(uint8_t c, uint8_t mode)
 	hc=c>>4;
 	sendhalfbyte(hc);sendhalfbyte(c);
 }
-//------------------------------------------------
+
+
+/*04 LCD_Clear()
+ * Р¤СѓРЅРєС†РёСЏ РѕС‡РёС‰Р°РµС‚ LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void LCD_Clear(void)
 {
 	sendbyte(0x01,0);
 	HAL_Delay(2);
 }
-//------------------------------------------------
+
+
+/*05 LCD_SendChar()
+ * Р¤СѓРЅРєС†РёСЏ РѕС‚РїСЂР°РІР»СЏРµС‚ СЃРёРјРІРѕР» РЅР° LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void LCD_SendChar(char ch)
 {
 	sendbyte(ch,1);
 }
-//------------------------------------------------
+
+
+/*06 LCD_SendChar()
+ * Р¤СѓРЅРєС†РёСЏ РѕС‚РїСЂР°РІР»СЏРµС‚ СЃРёРјРІРѕР» РЅР° LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void LCD_String(char* st)
 {
 	uint8_t i=0;
@@ -56,7 +97,13 @@ void LCD_String(char* st)
 		i++;
 	}
 }
-//------------------------------------------------
+
+
+/*07 LCD_SetPos()
+ * Р¤СѓРЅРєС†РёСЏ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РїРѕР»РѕР¶РµРЅРёРµ СЃРёРјРІРѕР»Р° РЅР° LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void LCD_SetPos(uint8_t x, uint8_t y)
 {
 	switch(y)
@@ -69,17 +116,13 @@ void LCD_SetPos(uint8_t x, uint8_t y)
 			sendbyte((0x40+x)|0x80,0);
 			HAL_Delay(1);
 			break;
-		case 2:
-			sendbyte((0x14+x)|0x80,0);
-			HAL_Delay(1);
-			break;
-		case 3:
-			sendbyte((0x54+x)|0x80,0);
-			HAL_Delay(1);
-			break;
 	}
 }
-//------------------------------------------------
+/*07 LCD_SetPos()
+ * Р¤СѓРЅРєС†РёСЏ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚ LCD Р”РёСЃРїР»РµР№
+ *
+ *
+ * */
 void LCD_ini(void)
 {
 	HAL_Delay(15);
@@ -91,15 +134,15 @@ void LCD_ini(void)
 	HAL_Delay(1);
 	sendhalfbyte(0x02);
 	HAL_Delay(1);
-	sendbyte(0x28,0);//режим 4 бит, 2 линии (для нашего большого дисплея это 4 линии, шрифт 5х8	
+	sendbyte(0x28,0);
 	HAL_Delay(1);
-	sendbyte(0x0C,0);//дисплей включаем (D=1), курсоры никакие не нужны
+	sendbyte(0x0C,0);
 	HAL_Delay(1);
-	sendbyte(0x01,0);//уберем мусор
+	sendbyte(0x01,0);
 	HAL_Delay(2);
-	sendbyte(0x06,0);//пишем влево
+	sendbyte(0x06,0);
 	HAL_Delay(1);
-	setled();//подсветка
-	setwrite();//запись
+	setled();
+	setwrite();
 }
 
